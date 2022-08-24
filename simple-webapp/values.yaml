@@ -1,0 +1,15 @@
+deployment:
+   name: simple-webapp
+   namespace: default
+   app: prod
+   capp: c-simple-webapp
+   cport: 5000
+   replicas: 2
+   image.tag: ${CI_COMMIT_TAG} 
+
+service:
+  type: NodePort
+  ports:
+      port: 80
+      targetPort: 5000
+      nodePort: 31000
