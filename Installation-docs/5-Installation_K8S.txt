@@ -1,0 +1,53 @@
+Installation K8S with Kubespary:
+
+
+cd /srv
+git clone https://github.com/kubernetes-sigs/kubespray.git
+cd kubespray
+curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+python3.7 get-pip.py --user
+
+
+cp -rfp inventory/sample inventory/mycluster
+vim inventory/mycluster/inventory.ini
+master          ansible_host=192.168.200.151 ip=192.168.200.151
+Worker1         ansible_host=192.168.200.152 ip=192.168.200.152
+Worker2         ansible_host=192.168.200.153 ip=192.168.200.153
+
+[kube-master]
+master
+
+[etcd]
+master
+
+[kube-node]
+worker1
+worker2
+
+[k8s-cluster:children]
+kube-master
+kube-node
+:wq
+
+pip3 install -r requirements.txt
+vim inventory/mycluster/group_vars/k8s_cluster/k8s-cluster.yml
+container_manager: containerd
+etcd_deployment_type: host
+kubelet_deployment_type: host
+:wq
+ansible-playbook -i inventory/mycluster/inventory.ini cluster.yml
+
+#################################################################
+
+master:
+
+kubectl  cluster-info
+kubectl  get nodes
+
+kubectl label nodes worker1 kubernetes.io/role=worker
+kubectl label nodes worker2 kubernetes.io/role=worker
+
+echo 'source <(kubectl completion bash)' >>~/.bashrc
+echo 'alias k=kubectl' >>~/.bashrc
+echo 'complete -o default -F __start_kubectl k' >>~/.bashrc
+source ~/.bashrc

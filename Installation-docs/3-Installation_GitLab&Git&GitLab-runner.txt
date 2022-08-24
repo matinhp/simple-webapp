@@ -1,0 +1,106 @@
+1- install gitlab-ce
+
+docker pull gitlab/gitlab-ce:14.10.0-ce.0 
+
+
+
+mkdir /srv/gitlab
+cd /srv/gitlab
+mkdir config logs data
+
+vim docker-compose.yml
+version: '3.6'
+services:
+ web:
+     image: 'gitlab/gitlab-ce:14.10.0-ce.0'
+     container_name: 'gitlab-ce'
+     restart: always
+     hostname: 'gitlab'
+     environment:
+       GITLAB_OMNIBUS_CONFIG:
+            external_url 'http://192.168.200.150'
+     ports:
+       - "80:80"
+     volumes:
+       -  '/srv/gitlab/config:/etc/gitlab'
+       -  '/srv/gitlab/logs:/var/log/gitlab'
+       -  '/srv/gitlab/data:/var/opt/gitlab'
+	 -  '/etc/localtime:/etc/localtime:ro'
+     shm_size:  '256m'
+:wq
+
+
+
+vim /etc/systemd/system/gitlab-ce.servicee
+[Unit]
+Description=Gitlab Service
+After=docker.service
+
+[Service]
+User=root
+Group=root
+StandardOutput=null
+StandardError=null
+WorkingDirectory=/srv/gitlab
+ExecStart=/usr/local/bin/docker-composee  -p gitlab-ce  up
+ExecStop=/usr/local/bin/docker-compose  -p gitlab-ce   down
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
+:wq
+
+systemctl daemon-reload
+systemctl  start gitlab-ce.service
+systemctl  enable gitlab-ce.service
+
+2- install gitlab-runner
+
+curl -L "https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.rpm.sh" | sudo bash
+yum install gitlab-runner
+gitlab-runner -version
+
+
+vim /etc/systemd/system/gitlab-runner.service
+
+[Unit]
+Description=GitLab Runner
+ConditionFileIsExecutable=/usr/bin/gitlab-runner
+After=syslog.target network.target
+
+[Service]
+StartLimitInterval=5
+StartLimitBurst=10
+ExecStart=/usr/bin/gitlab-runner "run" "--working-directory" "/home/gitlab-runner" "--config" "/etc/gitlab-runner/config.toml" "--service" "gitlab-runner" "--user" "gitlab-runner"
+Restart=always
+RestartSec=120
+EnvironmentFile=-/etc/sysconfig/gitlab-runner
+
+[Install]
+WantedBy=multi-user.target
+:wq
+
+systemctl daemon-reload
+systemctl  start gitlab-runner.service
+systemctl  enable gitlab-runner.service
+
+
+# Register GitLab Runner from the command line. Use docker and privileged mode
+gitlab-runner register -n \
+  --url http://127.0.0.1:8131/ \
+  --registration-token REGISTRATION_TOKEN \
+  --executor docker \
+  --description "My Docker Runner" \
+  --docker-image "docker:dind" \
+  --docker-privileged \
+
+usermod  -aG docker gitlab-runner
+
+3- install git
+
+yum -y install https://packages.endpointdev.com/rhel/7/os/x86_64/endpoint-repo.x86_64.rpm
+yum -y install git
+git --version
+
+

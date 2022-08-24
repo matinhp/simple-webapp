@@ -1,0 +1,90 @@
+install nexus:
+
+yum -y install java-1.8.0-openjdk java-1.8.0-openjdk-devel
+java -version
+cd /opt
+wget https://download.sonatype.com/nexus/3/latest-unix.tar.gz
+tar -xzvf nexus-3.41.0-01-unix.tar.gz
+ls -lh
+mv nexus-3.41.0-01 nexus
+mv sonatype-work nexusdata
+rm -f nexus-3.41.0-01-unix.tar.gz
+
+useradd --system --no-create-home nexus
+chown -R nexus:nexus /opt/nexus
+chown -R nexus:nexus /opt/nexusdata
+
+vim /opt/nexus/bin/nexus.vmoptions
+# Change the data directory
+-Dkaraf.data=../nexusdata/nexus3
+-Dkaraf.log=../nexusdata/nexus3/log
+-Djava.io.tmpdir=../nexusdata/nexus3/tmp
+:wq
+
+vim /opt/nexus/bin/nexus.rc
+# Change the user for the nexus service account
+run_as_user="nexus"
+:wq
+
+
+vim /etc/security/limits.conf
+# Configure the open file limit of the nexus user
+# Add the below values to the file
+nexus - nofile 65536
+:wq
+
+vim /etc/systemd/system/nexus.service
+[Unit]
+Description=Nexus Service
+After=syslog.target network.target
+
+[Service]
+Type=forking
+LimitNOFILE=65536
+ExecStart=/opt/nexus/bin/nexus start
+ExecStop=/opt/nexus/bin/nexus stop
+User=nexus
+Group=nexus
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+:wq
+
+systemctl daemon-reload
+systemctl enable nexus.service
+systemctl start nexus.service
+tail -f /opt/nexusdata/nexus3/log/nexus.log
+netstat -tunlp | grep 8081
+
+yum install -y epel-release
+yum repolist
+yum install nginx
+systemctl enable nginx
+systemctl status nginx
+systemctl start nginx
+
+vim /etc/nginx/nginx.conf
+# Add the following contents to a Location Blocks
+location / {
+	client_max_body_size 1G;
+      proxy_pass "http://127.0.0.1:8081";
+      proxy_set_header        Host $host;
+      proxy_set_header        X-Real-IP $remote_addr;
+      proxy_set_header        X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header        X-Forwarded-Proto $scheme;
+      proxy_set_header        X-Forwarded-Ssl on;
+      proxy_read_timeout      300;
+      proxy_connect_timeout   300;
+
+ }
+:wq
+
+nginx -t
+systemctl restart nginx
+
+cat /opt/nexusdata/nexus3/admin.password
+
+# login Nexus
+# Create docker repository in nexus
+# Create Role and user in nexus 

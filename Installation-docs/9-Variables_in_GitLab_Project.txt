@@ -1,0 +1,9 @@
+# we need to set up environment variables in our Gitlab account. In GitLab, navigate to your repository -> Settings -> CI / CD -> variables ( expand ). Then, we are going to add the following configuration:
+
+    CI_REGISTRY_USER -  Nexus user
+    CI_REGISTRY_PASSWORD -  Nexus Password
+    SERVER — The endpoint to the Kubernetes API for our cluster. We can find it running the following command: 
+		# kubectl  cluster-info
+    CERTIFICATE_AUTHORITY_DATA - This is the CA configuration for the Kubernetes cluster. There are some ways to get it, one of them is in your ~/.kube/config file
+    USER_TOKEN - This value is the service account token created earlier. We can get this value running the following command:
+		# kubectl  describe  secrets gitlab-secret

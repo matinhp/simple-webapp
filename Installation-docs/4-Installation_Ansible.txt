@@ -1,0 +1,33 @@
+1- install ansibale
+
+yum install epel-release -y
+yum makecache
+yum install ansible -y 
+ansible --version
+ansible -m ping localhost
+* copy ssh key to cluster nodes
+
+vim  /etc/ansibel/hosts
+[k8ssrv]
+192.168.200.151
+192.168.200.152
+192.168.200.153
+:wq
+
+ansible   k8ssrv -m ping
+
+2- install python3.9
+
+yum groupinstall 'development tools' -y && yum install wget openssl-devel bzip2-devel libffi-devel xz-devel -y
+cd /usr/src
+wget https://www.python.org/ftp/python/3.9.6/Python-3.9.6.tgz
+tar xzf Python-3.9.6.tgz
+cd Python-3.9.6 && ./configure --enable-optimizations
+make altinstall
+ls /usr/local/bin/python*
+alternatives --install /usr/bin/python3 python3 /usr/local/bin/python3.9 1 && alternatives --set python3 /usr/local/bin/python3.9 && echo "2" | alternatives --config python
+/usr/local/bin/python3.9 -m pip install --upgrade pip
+ls /usr/local/bin/pip*
+alternatives --install /usr/bin/pip pip /usr/local/bin/pip3.9 1 && alternatives --set pip /usr/local/bin/pip3.9
+python3 -V && pip3 -V
+rm -f Python-3.9.6.tgz

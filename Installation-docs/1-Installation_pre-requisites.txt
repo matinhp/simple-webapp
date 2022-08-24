@@ -1,0 +1,26 @@
+Commands :
+
+yum clean all
+yum update -y
+yum install telnet net-tools vim curl wget bash-completion chrony -y
+systemctl start chronyd
+systemctl enable chronyd
+
+
+
+**** K8S Cluster Nodes ****
+
+modprobe br-netfilter
+echo 'net.bridge.bridge-nf-call-iptables = 1' | sudo tee -a /etc/sysctl.conf
+sysctl -p
+
+disable swap :
+
+vim /etc/fstab
+#COMMENT SWAP PARTION 
+:wq 
+
+modprobe br_netfilter
+sh -c 'echo "br_netfilter" > /etc/modules-load.d/br_netfilter.conf'
+
+reboot
