@@ -1,4 +1,4 @@
-image: docker:latest
+image: 192.168.200.154:8131/repository/simple-webapp/docker:latest
 services:
   - name: docker:dind
     command: ["dockerd-entrypoint.sh", "--insecure-registry=192.168.200.154:8131"]
@@ -26,7 +26,7 @@ build:
 
 deploy:
   stage: deploy
-  image: dtzar/helm-kubectl:3.9
+  image: 192.168.200.154:8131/repository/simple-webapp/dtzar/helm-kubectl:3.9
   only:
     - tags
   tags:
@@ -37,4 +37,4 @@ deploy:
     - kubectl config set-credentials gitlab --token="${USER_TOKEN}"
     - kubectl config set-context default --cluster=k8s --user=gitlab
     - kubectl config use-context default
-    - helm upgrade simple-webapp ./simple-webapp --install --set deployment.image.tag=${CI_COMMIT_TAG}
+    - helm upgrade simple-webapp ./simple-webapp --install  --atomic --set deployment.image.tag=${CI_COMMIT_TAG}
