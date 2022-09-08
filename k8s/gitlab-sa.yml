@@ -20,3 +20,12 @@ subjects:
   - kind: ServiceAccount
     name: gitlab-service-account
     namespace: default
+    
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: gitlab-secret
+  annotations:
+    kubernetes.io/service-account.name: gitlab-service-account
+type: kubernetes.io/service-account-token
