@@ -88,3 +88,102 @@ cat /opt/nexusdata/nexus3/admin.password
 # login Nexus
 # Create docker repository in nexus
 # Create Role and user in nexus 
+
+
+
+
+#################################################################################
+Instrallation Nexus with docker-compose:
+
+cd /srv/
+mkdir nexus-data nginx
+chown -R 200 nexus-data/
+chmod 777 -R /srv/nginx
+docker pull sonatype/nexus3:3.41.1
+docker pull nginx
+
+vim docker-compose.yml
+version: "3.6"
+services:
+ nexus:
+     hostname:  nexus-devops
+     image: sonatype/nexus3:3.41.1
+     container_name: nexus
+     volumes:
+       -  "/srv/nexus-data:/nexus-data"
+     expose:
+       - "8081"
+     ports:
+       - "8100-8102:8100-8102"
+     restart: always
+     deploy:
+       resources:
+         limits:
+           cpus: '2'
+           memory: '3g'
+     healthcheck:
+       test: ["CMD", "curl", "-f", "--insecure", "http://nexus:8081"]
+       interval: 30s
+       timeout: 10s
+       retries: 3
+       start_period: 1m
+
+ reverse-proxy:
+     hostname: nexus-reverse
+     image: nginx
+     container_name: nexus-reverse
+     volumes:
+       - "/srv/nginx:/etc/nginx/conf.d"
+     ports:
+       - "80:80"
+     restart: always
+     deploy:
+       resources:
+         limits:
+           cpus: '1'
+           memory: '1g'
+
+:wq
+
+vim /srv/nginx/nexus.conf
+resolver 127.0.0.11 valid=5s;
+server {
+    listen    80;
+    client_max_body_size 100M;
+    location / {
+       set $backend_server nexus ;
+       proxy_pass http://$backend_server:8081 ;
+   }
+}
+:wq
+
+
+vim /etc/systemd/system/nexus.service
+[Unit]
+Description=Nexus Service
+After=docker.service
+StartLimitIntervalSec=500
+StartLimitBurst=5
+
+[Service]
+User=root
+Group=root
+#StandardOutput=null
+#StandardError=null
+WorkingDirectory=/srv
+ExecStart=/usr/local/bin/docker-compose  -p nexus  up
+ExecStop=/usr/local/bin/docker-compose  -p nexus   down
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
+:wq
+
+systemctl  daemon-reload
+systemctl  enable  nexus
+systemctl  start nexus
+
+
+cd /srv/nexus-data/
+cat admin.password
