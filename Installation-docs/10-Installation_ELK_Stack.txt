@@ -1,0 +1,211 @@
+# Install  Docker and docker-compose
+# Create docker-hosted repo on Nexus (elk:8101)
+# Add insecure-registries in daemon.json and restart docker.service
+# docker login $nexus:8081
+
+docker pull elasticsearch:8.4.1
+docker pull logstash:8.4.1 
+docker pull kibana:8.4.1
+
+docker tag elasticsearch:8.4.1   192.168.200.12:8101/repository/elk/elasticsearch:8.4.1
+docker tag logstash:8.4.1 	   192.168.200.12:8101/repository/elk/logstash:8.4.1
+docker tag kibana:8.4.1 	   192.168.200.12:8101/repository/elk/kibana:8.4.1
+
+
+docker push 192.168.200.12:8101/repository/elk/elasticsearch:8.4.1
+docker push 192.168.200.12:8101/repository/elk/logstash:8.4.1
+docker push 192.168.200.12:8101/repository/elk/kibana:8.4.1
+
+docker rmi elasticsearch:8.4.1
+docker rmi logstash:8.4.1
+docker rmi kibana:8.4.1
+
+
+cd /srv/
+mkdir elk 
+mkdir -p logstash/config
+mkdir logstash/pipeline
+mkdir -p elasticsearch/config
+mkdir -p kibana/config
+
+vim elasticsearch/config/elasticsearch.yml
+
+cluster.name: "docker-cluster"
+network.host: 0.0.0.0
+
+xpack.security.enabled: true
+xpack.monitoring.collection.enabled: true
+
+:wq
+
+vim logstash/config/logstash.yml
+
+http.host: "0.0.0.0"
+xpack.monitoring.elasticsearch.hosts: [ "http://192.168.200.13:9200" ]
+
+## X-Pack security credentials
+xpack.monitoring.enabled: true
+xpack.monitoring.elasticsearch.username: logstash_system
+xpack.monitoring.elasticsearch.password: $GENERATED_PASSWORD_WITH_COMMAND_resert-password
+
+:wq
+
+#    $ docker-compose exec elasticsearch bin/elasticsearch-reset-password --batch --user logstash_system
+
+
+vim logstash/pipeline/logstash.conf
+
+input {
+	tcp {
+		port => 5000
+	}
+}
+
+## Add your filters / logstash plugins configuration here
+
+output {
+	elasticsearch {
+		hosts => "elasticsearch:9200"
+		user => "elastic"
+		password => "$GENERATED_PASSWORD_WITH_COMMAND_resert-password
+"
+	}
+}
+
+:wq
+
+#    $ docker-compose exec elasticsearch bin/elasticsearch-reset-password --batch --user elastic
+
+
+vim kibana/config/kibana.yml
+
+server.name: kibana
+server.host: "0"
+elasticsearch.hosts: [ "http://elasticsearch:9200" ]
+xpack.monitoring.ui.container.elasticsearch.enabled: true
+
+## X-Pack security credentials
+#
+elasticsearch.username: kibana_ystem 
+elasticsearch.password: $GENERATED_PASSWORD_WITH_COMMAND_resert-password
+
+:wq
+===================== Document ELK 8.x =======================
+###Starting with Elastic v8.0.0, it is no longer possible to run Kibana using the bootstraped privileged elastic user.
+
+#The "changeme" password set by default for all aforementioned users is unsecure. For increased security, we will reset the passwords of all aforementioned Elasticsearch users to random secrets.
+
+#    Reset passwords for default users
+
+#    The commands below resets the passwords of the elastic, logstash_internal and kibana_system users. Take note of them.
+
+#    If the need for it arises (e.g. if you want to collect monitoring information through Beats and other components), feel free to repeat this operation at any time for the rest of the built-in users.
+
+==============================================================
+
+cd /srv/elk
+
+chmod 777 -R *
+
+vim docker-compose.yml
+
+version: '3.7'
+
+services:
+  elasticsearch:
+	image: 192.168.200.12:8101/repository/elk/elasticsearch:8.4.1
+    container_name: elasticsearch
+    restart: always
+    volumes:
+		- /srv/elk/elasticsearch:/usr/share/elasticsearch/data
+		- /srv/elk/elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml		
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    environment:
+      ES_JAVA_OPTS: "-Xmx256m -Xms256m"
+      ELASTIC_PASSWORD: elastic
+      discovery.type: single-node
+    networks:
+      - elk
+
+  logstash:
+    container_name: logstash
+    image: 192.168.200.12:8101/repository/elk/logstash:8.4.1
+    restart: always	
+    volumes:
+		- /srv/elk/logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml
+		- /srv/elk/logstash/pipeline:/usr/share/logstash/pipeline
+    ports:
+      - "5000:5000/tcp"
+      - "5000:5000/udp"
+      - "9600:9600"
+    environment:
+      LS_JAVA_OPTS: "-Xmx256m -Xms256m"
+    networks:
+      - elk
+    depends_on:
+      - elasticsearch
+
+  kibana:
+    container_name: kibana
+    image: 192.168.200.12:8101/repository/elk/kibana:8.4.1
+    restart: always	
+    volumes:
+		- /srv/elk/kibana/config/kibana.yml:/usr/share/kibana/config/kibana.yml
+    ports:
+      - "5601:5601"
+    networks:
+      - elk
+    depends_on:
+      - elasticsearch
+
+networks:
+  elk:
+    driver: bridge
+
+volumes:
+  elasticsearch:
+
+:wq
+
+
+
+vim /etc/systemd/system/elk.service
+
+
+[Unit]
+Description=ELK Service
+After=docker.service
+StartLimitIntervalSec=500
+StartLimitBurst=5
+
+[Service]
+User=root
+Group=root
+#StandardOutput=null
+#StandardError=null
+WorkingDirectory=/srv/elk
+ExecStart=/usr/local/bin/docker-compose  -p elk  up
+ExecStop=/usr/local/bin/docker-compose  -p elk   down
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
+
+:wq
+
+systemctl  daemon-reload
+systemctl  enable elk.service
+systemctl  start elk.service
+
+
+
+## open in browser 192.168.200.13:5601 
+#username: elastic 
+password : $GENERATED_PASSWORD_WITH_COMMAND_resert-password
+
+
+#    $ docker-compose exec elasticsearch bin/elasticsearch-reset-password --batch --user elastic
+
