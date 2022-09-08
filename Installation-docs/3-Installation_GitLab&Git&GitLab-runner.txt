@@ -98,7 +98,7 @@ gitlab-runner register -n \
 usermod  -aG docker gitlab-runner
 
 
-cat /etc/gitlab-runner/config.toml
+vim /etc/gitlab-runner/config.toml
 
 concurrent = 4
 check_interval = 0
@@ -129,8 +129,9 @@ check_interval = 0
     disable_cache = false
     volumes = ["/cache" , "/certs/client"]
     shm_size = 0
+:wq
 
-
+systemctl  restart  gitlab-runner.service
 
 3- install git
 
