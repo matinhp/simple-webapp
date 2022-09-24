@@ -6,7 +6,11 @@ yum install telnet net-tools vim curl wget bash-completion chrony -y
 systemctl start chronyd
 systemctl enable chronyd
 
-
+systemctl stop firewalld
+systemctl disable firewalld
+vim /etc/selinux/config
+disabled
+:wq
 
 **** K8S Cluster Nodes ****
 
