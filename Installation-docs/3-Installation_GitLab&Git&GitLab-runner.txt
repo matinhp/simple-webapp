@@ -31,7 +31,7 @@ services:
 
 
 
-vim /etc/systemd/system/gitlab-ce.servicee
+vim /etc/systemd/system/gitlab-ce.service
 [Unit]
 Description=Gitlab Service
 After=docker.service
@@ -42,7 +42,7 @@ Group=root
 StandardOutput=null
 StandardError=null
 WorkingDirectory=/srv/gitlab
-ExecStart=/usr/local/bin/docker-composee  -p gitlab-ce  up
+ExecStart=/usr/local/bin/docker-compose  -p gitlab-ce  up
 ExecStop=/usr/local/bin/docker-compose  -p gitlab-ce   down
 Restart=on-failure
 RestartSec=5s
