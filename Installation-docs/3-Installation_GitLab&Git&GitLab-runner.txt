@@ -123,6 +123,8 @@ check_interval = 0
   [runners.docker]
     tls_verify = false
     image = "192.168.200.12:8100/repository/simple-webapp/docker:dind"
+    pull_policy = ["if-not-present"]
+    allowed_pull_policies = ["always", "if-not-present"]
     privileged = true
     disable_entrypoint_overwrite = false
     oom_kill_disable = false
